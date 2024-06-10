@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mariposa con Three.js</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Crear la escena, la cámara y el renderizador
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Configurar el color de fondo del escenario
+        const skyColor = 0x87CEEB; // Color azul cielo
+        scene.background = new THREE.Color(skyColor);
+        renderer.setClearColor(skyColor);
+
+
+        //Aqui se crea la  mariposa /////////////////////////////////////////////////////////////////////
+
+        // Función para crear la geometría de los pétalos
+        function createPetalGeometry(scaleX, scaleY) {
+            const petalShape = new THREE.Shape();
+            petalShape.moveTo(0, 0);
+            petalShape.quadraticCurveTo(0.5 * scaleX, 1 * scaleY, 0, 2 * scaleY);
+            petalShape.quadraticCurveTo(-0.5 * scaleX, 0.5 * scaleY, 0, 0);
+            const extrudeSettings = {
+                steps: 30,
+                depth: 0.1,
+                bevelEnabled: true,
+                bevelThickness: 0.05,
+                bevelSize: 0.05,
+                bevelSegments: 10
+            };
+            return new THREE.ExtrudeGeometry(petalShape, extrudeSettings);
+        }
+
+        // Crear las alas a partir de la geometría de los pétalos
+        const wingMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+        const frontLeftWing = new THREE.Mesh(createPetalGeometry(3, 1.5), wingMaterial); // Ala anterior más grande y ancha
+        const backLeftWing = new THREE.Mesh(createPetalGeometry(1, 1), wingMaterial); // Ala posterior
+        const frontRightWing = new THREE.Mesh(createPetalGeometry(3, 1.5), wingMaterial); // Ala anterior más grande y ancha
+        const backRightWing = new THREE.Mesh(createPetalGeometry(1, 1), wingMaterial); // Ala posterior
+
+        // Agregar pivotes para cada conjunto de alas
+        const leftPivot = new THREE.Object3D();
+        const rightPivot = new THREE.Object3D();
+
+        // Posicionar las alas en sus respectivos pivotes y acercar un extremo al cuerpo
+        frontLeftWing.position.set(-0.1, 0,-0.2);
+        frontLeftWing.rotation.z = Math.PI / 4;
+        backLeftWing.position.set(-0.9, -1.6, -0.2); // Ala posterior
+        backLeftWing.rotation.z = -Math.PI / 8; // Ajuste para inversión
+        frontRightWing.position.set(0.1, 0, -0.2);
+        frontRightWing.rotation.z = -Math.PI / 4;
+        backRightWing.position.set(0.9, -1.6, -0.2); // Ala posterior
+        backRightWing.rotation.z = Math.PI / 8; // Ajuste para inversión
+
+        leftPivot.add(frontLeftWing);
+        leftPivot.add(backLeftWing);
+        rightPivot.add(frontRightWing);
+        rightPivot.add(backRightWing);
+
+        // Crear un grupo para la mariposa
+        const butterfly = new THREE.Group();
+        butterfly.add(leftPivot);
+        butterfly.add(rightPivot);
+
+        // Función para crear un óvalo tridimensional
+        function createOval(scaleX, scaleY, scaleZ, color) {
+            const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+            geometry.scale(scaleX, scaleY, scaleZ);
+            const material = new THREE.MeshPhongMaterial({ color });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Función para crear una esfera tridimensional
+        function createSphere(radius, color) {
+            const geometry = new THREE.SphereGeometry(radius, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Crear los óvalos y la esfera del cuerpo de la mariposa
+        const bodyColor = 0x663300; // Definir el color del cuerpo una vez
+        const oval1 = createOval(1, 1.5, 1, bodyColor); // Marrón
+        const oval2 = createOval(1, 3, 1, bodyColor); // Marrón
+        const sphere = createSphere(0.2, bodyColor); // Esfera
+
+        // Posicionar los óvalos y la esfera para formar el cuerpo de la mariposa
+        oval1.position.set(0, 0.3, 0); // Ajustar la posición según sea necesario
+        sphere.position.set(0, -0.1, 0); // Posición entre los dos óvalos
+        oval2.position.set(0, -0.5, 0); // Ajustar la posición según sea necesario
+
+        butterfly.add(oval1);
+        butterfly.add(sphere); // Añadir la esfera al cuerpo de la mariposa
+        butterfly.add(oval2);
+
+        // Función para crear una antena
+        function createAntenna() {
+            const geometry = new THREE.CylinderGeometry(0.02, 0.02, 1, 32);
+            const material = new THREE.MeshPhongMaterial({ color: bodyColor }); // Usar el mismo color del cuerpo
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Crear las antenas
+        const antenna1 = createAntenna();
+        const antenna2 = createAntenna();
+
+        // Posicionar y rotar las antenas
+        antenna1.position.set(-0.3, 1, 0);
+        antenna1.rotation.z = Math.PI / 6;
+        antenna2.position.set(0.3, 1, 0);
+        antenna2.rotation.z = -Math.PI / 6;
+
+        butterfly.add(antenna1);
+        butterfly.add(antenna2);
+
+        // Elevar la mariposa 2 unidades en el eje Y
+        butterfly.position.y = getRandomPosition(-8);
+        scene.add(butterfly);
+
+        // Crear el plano verde que representa el suelo
+        const planeGeometry = new THREE.PlaneGeometry(200, 200);
+        const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2; // Rotar el plano para que quede horizontal
+        plane.position.y = -1; // Posicionar el plano debajo de la mariposa
+        scene.add(plane);
+
+        // Añadir luz
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5).normalize();
+        scene.add(light);
+
+        // Variables para el movimiento aleatorio
+        let targetX = 30;
+        let targetZ = 30;
+
+        function getRandomPosition(range) {
+            return (Math.random() - 1) * range;
+        }
+
+        function updateTargetPosition() {
+            targetX = getRandomPosition(30);
+            targetZ = getRandomPosition(30);
+        }
+
+        // Animar las alas y el movimiento aleatorio
+        function animate() {
+            const time = Date.now() * 0.004;
+
+            // Rotación del ala izquierda
+            leftPivot.rotation.y = Math.sin(time) * Math.PI / 4;
+
+            // Rotación del ala derecha
+            rightPivot.rotation.y = -Math.sin(time) * Math.PI / 4;
+
+            // Movimiento aleatorio de la mariposa
+            const speed = 0.04;
+            butterfly.position.x += (targetX - butterfly.position.x) * speed;
+            butterfly.position.z += (targetZ - butterfly.position.z) * speed;
+
+            if (Math.abs(butterfly.position.x - targetX) < 0.1 && Math.abs(butterfly.position.z - targetZ) < 0.1) {
+                updateTargetPosition();
+            }
+
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+//Aqui se crea la  flor /////////////////////////////////////////////////////////////////////
+
+
+
+// Crear la forma de un pétalo curvo
+function createPetalShape() {
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 0);
+            shape.quadraticCurveTo(0.5, 1, 0, 1); // Curva hacia arriba
+            shape.quadraticCurveTo(-0.5, 1.5, 0, 0); // Curva hacia abajo
+            return shape;
+        }
+
+        // Crear un pétalo 3D a partir de la forma
+        function createPetal() {
+            const petalShape = createPetalShape();
+            const extrudeSettings = {
+                steps: 20,
+                depth: 0.1,
+                bevelEnabled: true,
+                bevelThickness: 0.05,
+                bevelSize: 0.05,
+                bevelSegments: 10
+            };
+            const geometry = new THREE.ExtrudeGeometry(petalShape, extrudeSettings);
+            const material = new THREE.MeshPhongMaterial({ color: 0xff69b4, side: THREE.DoubleSide }); // Color rosa
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Crear el centro de la flor
+        function createCenter() {
+            const geometry = new THREE.SphereGeometry(0.4, 64, 64);
+            const material = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Color amarillo
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Crear la flor completa
+        function createFlower() {
+            const flower = new THREE.Group();
+
+            // Crear el cilindro central
+            const cylinderGeometry = new THREE.CylinderGeometry(0.55, 0.55, 0.15, 64);
+            const cylinderMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Color amarillo
+            const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+            flower.add(cylinder);
+            cylinder.position.y = 0;
+            cylinder.position.x = 0.05;// Posiciona el cono debajo de la esfera
+            cylinder.rotation.x = Math.PI /1.5; // Invertir el cono
+            cylinder.rotation.z = Math.PI / 14; // Invertir el cono
+
+            // Añadir pétalos
+            const petalCount = 8;
+            const cylinderRadius = 0.5; // Radio del cilindro
+            for (let i = 0; i < petalCount; i++) {
+                const petal = createPetal();
+                const angle = (i / petalCount) * Math.PI * 2;
+                petal.position.set(Math.cos(angle) * cylinderRadius, Math.sin(angle) * cylinderRadius, 0);
+                petal.rotation.z = angle ;
+                petal.rotation.x = Math.PI / 9; // Apuntar los pétalos hacia afuera
+                flower.add(petal);
+            }
+
+            return flower;
+        }
+
+        // Crear y añadir la flor a la escena
+        const flower = createFlower();
+        scene.add(flower);
+
+        // Crear el tallo (cono invertido)
+        const coneGeometry = new THREE.ConeGeometry(0.65, 0.5, 64); // Ancho de la esfera como radio, altura reducida
+        const coneMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // Color verde oscuro
+        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+        cone.position.y = -0.09; // Posiciona el cono debajo de la esfera
+        cone.position.x = 0; 
+        cone.position.z = 0.4; 
+        cone.rotation.x = Math.PI /1.5; // Invertir el cono
+        cone.rotation.z = Math.PI / 18; // Invertir el cono
+       
+        scene.add(cone);
+
+        const branchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 64);
+        const branchMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22}); // Color marrón para la rama
+        const branch = new THREE.Mesh(branchGeometry, branchMaterial);
+        branch.position.set(0, 1.0, 0); // Posicionar la rama en la punta del cono
+        branch.rotation.x = Math.PI ; // Orientar la rama verticalmente
+        branch.rotation.y =0;
+        cone.add(branch); 
+
+
+
+ /// segunda flor //////
+
+   // Crear y añadir la segunda flor a la escena
+const flower2 = createFlower();
+scene.add(flower2);
+
+// Posicionar la segunda flor en una nueva posición
+flower2.position.set(3, 0, 0); // Cambiar la posición según sea necesario
+
+// Crear el tallo para la segunda flor
+const cone2 = new THREE.Mesh(coneGeometry, coneMaterial.clone()); // Usar un material clonado para evitar compartir el mismo material
+cone2.position.set(3, -0.09, 0.3); // Cambiar la posición según sea necesario
+cone2.rotation.x = Math.PI / 1.5;
+cone2.rotation.z = Math.PI / 18;
+scene.add(cone2);
+
+// Crear la rama para la segunda flor
+const branch2 = new THREE.Mesh(branchGeometry, branchMaterial.clone()); // Usar un material clonado para evitar compartir el mismo material
+branch2.position.set(0.1, 0.91, 0); // Cambiar la posición según sea necesario
+branch2.rotation.x = Math.PI;
+cone2.add(branch2);
+
+
+//////////varias flores/////////////////////////7
+
+
+// Número de flores a generar
+const numFlowers = 200;
+
+for (let i = 0; i < numFlowers; i++) {
+    // Crear una nueva flor
+    const flower = createFlower();
+    scene.add(flower);
+
+    // Generar coordenadas aleatorias dentro de un rango
+    const posX = Math.random() * 100 - 100; // Rango de -5 a 5 en el eje x
+    const posY = Math.random() * 0; // Mantener las flores cerca del suelo
+    const posZ = Math.random() * 100 - 100; // Rango de -5 a 5 en el eje z
+
+    // Posicionar la flor en las coordenadas aleatorias generadas
+    flower.position.set(posX, posY, posZ);
+
+    // Crear el tallo para la flor
+    const cone = new THREE.Mesh(coneGeometry, coneMaterial.clone()); // Usar un material clonado para evitar compartir el mismo material
+    cone.position.set(posX, posY - 0.09, posZ + 0.3); // Ajustar la posición del tallo según la flor
+    cone.rotation.x = Math.PI / 1.5;
+    cone.rotation.z = Math.PI / 18;
+    scene.add(cone);
+
+    // Crear la rama para la flor
+    const branch = new THREE.Mesh(branchGeometry, branchMaterial.clone()); // Usar un material clonado para evitar compartir el mismo material
+    branch.position.set(0, 1.0, 0); // Ajustar la posición de la rama relativa al cono
+    branch.rotation.x = Math.PI; // Orientar la rama verticalmente
+    cone.add(branch); // Adjuntar la rama al cono
+}
+
+
+
+
+// se genera la segunda mariposa ///////////////////////////////
+const butterfly2 = butterfly.clone(); // Clonar la primera mariposa
+
+// Ajustar posición de la segunda mariposa
+butterfly2.position.set(20, 2, 20); // Ajustar la posición según sea necesario
+
+// Agregar la segunda mariposa a la escena
+scene.add(butterfly2);
+
+// Variables para el movimiento aleatorio de la segunda mariposa
+let targetX2 = 8;
+let targetZ2 = 1;
+let targetY2 = 2;
+
+function updateTargetPosition2() {
+    targetX2 = getRandomPosition(30);
+    targetZ2 = getRandomPosition(30);
+}
+
+// Animar las alas y el movimiento aleatorio de la segunda mariposa
+function animateButterfly2() {
+    const time = Date.now() * 0.005;
+
+    // Rotación del ala izquierda de la segunda mariposa
+    butterfly2.children[0].children[0].rotation.y = Math.sin(time) * Math.PI / 4;
+
+    // Rotación del ala derecha de la segunda mariposa
+    butterfly2.children[1].children[0].rotation.y = -Math.sin(time) * Math.PI / 4;
+
+    // Movimiento aleatorio de la segunda mariposa
+    const speed = 0.02;
+    butterfly2.position.x += (targetX2 - butterfly2.position.x) * speed;
+    butterfly2.position.z += (targetZ2 - butterfly2.position.z) * speed;
+
+    if (Math.abs(butterfly2.position.x - targetX2) < 0.1 && Math.abs(butterfly2.position.z - targetZ2) < 0.1) {
+        updateTargetPosition2();
+    }
+
+    requestAnimationFrame(animateButterfly2);
+}
+
+// Iniciar la animación de la segunda mariposa
+animateButterfly2();
+
+
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz ambiental con intensidad 0.5
+scene.add(ambientLight);
+
+// Añadir luz direccional
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3); // Luz direccional blanca con intensidad 1
+directionalLight.position.set(0.5, 0, 0.5).normalize(); // Posición de la luz
+scene.add(directionalLight);
+
+        // Posicionar la cámara para vista frontal
+        camera.position.set(8, 5, 10); // Posicionar la cámara en una posición frontal
+        camera.lookAt(0, 0, 0); // Apuntar la cámara hacia el centro de la escena
+
+        // Inicializar la posición objetivo
+        updateTargetPosition();
+
+        // Iniciar la animación
+        animate();
+
+      
+    </script>
+</body>
+</html>
